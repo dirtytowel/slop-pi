@@ -4,6 +4,12 @@ on:
   push:
     branches: [master]
     paths: [package.json]
+  workflow_dispatch:
+    inputs:
+      rerelease:
+        description: "delete and recreate the release for the current package.json version"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,11 +25,16 @@ jobs:
           v=v$(jq -r .version package.json)
           echo "tag=$v" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --tags origin "refs/tags/$v" >/dev/null; then echo "exists=true" >> "$GITHUB_OUTPUT"; fi
+      - name: clean
+        if: inputs.rerelease && steps.v.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "${{ steps.v.outputs.tag }}" --cleanup-tag --yes || git push origin --delete "${{ steps.v.outputs.tag }}"
       - name: tar
-        if: steps.v.outputs.exists != 'true'
+        if: steps.v.outputs.exists != 'true' || inputs.rerelease
         run: tar czf slop-pi-${{ steps.v.outputs.tag }}.tar.gz package.json extensions skills themes
       - name: release
-        if: steps.v.outputs.exists != 'true'
+        if: steps.v.outputs.exists != 'true' || inputs.rerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ steps.v.outputs.tag }}" slop-pi-${{ steps.v.outputs.tag }}.tar.gz --target "${{ github.sha }}" --generate-notes
