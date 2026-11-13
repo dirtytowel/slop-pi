@@ -1,6 +1,6 @@
 {
   "name": "slop-pi",
-  "version": "0.1.0",
+  "version": "1.4.0-r1",
   "keywords": ["pi-package"],
   "pi": {
     "extensions": ["./extensions"],
